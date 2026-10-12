@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: campusfind-production
@@ -24,14 +24,24 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Reconstruct CampusFind source
+      - name: Reconstruct source once and commit it for editing
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p src
-          cat bundle/part-*.b64 | base64 --decode | tar -xz -C src
-          test -f src/package.json
-          test -f src/vercel.json
+          if [[ ! -f src/package.json ]]; then
+            mkdir -p src
+            cat bundle/part-*.b64 | base64 --decode | tar -xz -C src
+            test -f src/package.json
+            test -f src/vercel.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src
+            git commit -m "Add unpacked CampusFind source"
+            git push origin HEAD:main
+          else
+            test -f src/package.json
+            test -f src/vercel.json
+          fi
           mkdir -p src/.vercel
           printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > src/.vercel/project.json
 
