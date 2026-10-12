@@ -1,0 +1,59 @@
+name: Deploy CampusFind to Vercel
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: campusfind-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: team_oXsiuSM2qZ2aWj1qKE6q2OyC
+      VERCEL_PROJECT_ID: prj_0vbI0GnisfBLqBS3kYoFOKsQ7tx5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Reconstruct CampusFind source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p src
+          cat bundle/part-*.b64 | base64 --decode | tar -xz -C src
+          test -f src/package.json
+          test -f src/vercel.json
+          mkdir -p src/.vercel
+          printf '{"orgId":"%s","projectId":"%s"}\n' "$VERCEL_ORG_ID" "$VERCEL_PROJECT_ID" > src/.vercel/project.json
+
+      - name: Check Vercel token
+        shell: bash
+        run: |
+          if [[ -z "$VERCEL_TOKEN" ]]; then
+            echo "::error::Add VERCEL_TOKEN under GitHub Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull production settings
+        working-directory: src
+        run: vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build production deployment
+        working-directory: src
+        run: vercel build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy to production
+        working-directory: src
+        run: vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
