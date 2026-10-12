@@ -1,0 +1,14 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.vercel/
+data/items.json
+data/recovered-items.json
+uploads/*
+!uploads/.gitkeep
+npm-debug.log*
+.DS_Store
+
+# Local-only working data
+.DS_Store

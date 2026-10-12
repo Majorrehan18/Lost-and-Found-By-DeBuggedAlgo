@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "outputDirectory": "public",
+  "regions": ["bom1"],
+  "functions": {
+    "api/[...path].js": {
+      "maxDuration": 60
+    }
+  }
+}
