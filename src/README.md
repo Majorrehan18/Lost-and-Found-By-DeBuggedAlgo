@@ -1,70 +1,53 @@
-# CampusFind — GitHub + Vercel edition
+# CampusFind — Campus Lost & Found
 
-CampusFind is a responsive campus lost-and-found website. This repository keeps local VS Code development and adds a Vercel deployment path with durable Neon PostgreSQL data, private Vercel Blob image storage, Gemini image recognition, and password-protected administrator actions.
+CampusFind is a responsive lost-and-found website for a campus. This repository is connected to Vercel project `lost-and-found`. The Vercel project root is `src/`; pushes to `main` are deployed by Vercel's Git integration.
 
 ## Features
 
-- Lost-item and found-item reporting with photo uploads
-- Weighted matching by category, location, description, date, and available visual profile
-- Gemini visual analysis for uploaded item photos
-- A separate Recovered Items handover register
-- Gemini extraction of student name, roll number, and course from permitted ID-card photos
-- Durable cloud data with Neon PostgreSQL when deployed on Vercel
-- Private Blob storage for uploaded photos; ID-card photos can be retrieved only through the admin-protected recovery endpoint
-- Administrator password required for the recovery register, ID photos, report deletion, and clearing reports on Vercel
+- Report lost or found items, with photo uploads.
+- Match lost and found reports using category, location, date, description, and optional Gemini image analysis.
+- Separate administrator-protected Recovered Items handover register.
+- Optional Gemini extraction of student name, roll number, and course from ID-card photos.
+- Durable private Vercel Blob storage for reports, item photos, and ID-card images.
+- Local JSON-file storage for VS Code development.
 
-## Deploy with GitHub + Vercel
+## Vercel deployment
 
-### 1. Upload the project to GitHub
+### Project setup
 
-1. Download and extract this project ZIP.
-2. Create a new repository on GitHub.
-3. Upload the **contents** of the extracted folder to the repository root. Do not upload the ZIP file itself.
-4. Do not commit `.env`, real student data, or uploaded photos. `.gitignore` already excludes these.
+The Vercel project must use **Root Directory: `src`** and Node.js 22.x or newer. `src/vercel.json` declares `public/` as the static output directory and configures the catch-all API function at `src/api/[...path].js`.
 
-### 2. Create a Neon database
+A private Vercel Blob store named `campusfind-private-files` has been connected to the `lost-and-found` project. The connected store provides `BLOB_READ_WRITE_TOKEN` in Production, Preview, and Development. The app uses Blob for persistent JSON report records as well as images; no separate PostgreSQL database is required.
 
-1. Create a PostgreSQL project at <https://neon.tech/>.
-2. Copy the database connection string from Neon.
-3. The app creates its two tables automatically at first API use; no manual SQL migration is required.
+### Required environment variables
 
-### 3. Create a private Vercel Blob store
+In Vercel → **lost-and-found → Settings → Environment Variables**, set these for Production (and Preview if using preview deployments):
 
-1. Open your Vercel dashboard and create a **private** Blob store for CampusFind.
-2. Copy its read-write token. The backend stores both item photos and ID-card photos privately; the app serves ordinary item photos through a public read endpoint and requires admin sign-in for ID-card photos.
-
-### 4. Import/connect the GitHub repository in Vercel
-
-1. Open the existing `campusfind-lost-and-found` Vercel project, or create a new project by importing the GitHub repository.
-2. Connect the GitHub repository and use the repository root as the project root.
-3. `vercel.json` points Vercel at `public/` for static files and configures the API catch-all function. No frontend build command is needed.
-4. Add the environment variables listed below for **Production** (and Preview if needed).
-5. Deploy. Later pushes to your connected deployment branch will redeploy the site automatically.
-
-### 5. Configure Vercel environment variables
-
-In **Vercel → Project → Settings → Environment Variables**, add:
-
-| Name | Required? | Value |
+| Name | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | Yes | Neon PostgreSQL connection string |
-| `BLOB_READ_WRITE_TOKEN` | Yes | Read-write token from the private Vercel Blob store |
-| `CAMPUSFIND_ADMIN_PASSWORD` | Yes | A long, unique administrator password |
-| `CAMPUSFIND_SESSION_SECRET` | Yes | At least 32 random bytes, hex encoded |
-| `GEMINI_API_KEY` | Optional | Google AI Studio API key for Gemini image/ID analysis |
-| `GEMINI_MODEL` | Optional | `gemini-3.5-flash-lite` |
+| `BLOB_READ_WRITE_TOKEN` | Yes | Automatically supplied by the connected private Blob store; don't replace it with a public token |
+| `CAMPUSFIND_ADMIN_PASSWORD` | Yes for administrator features | Long, unique password used to access recovery records, ID photos, and deletion actions |
+| `CAMPUSFIND_SESSION_SECRET` | Yes for administrator features | Secret with at least 32 cryptographically random bytes encoded as hex |
+| `GEMINI_API_KEY` | Optional | Enables Gemini item-photo analysis and ID-card text extraction |
+| `GEMINI_MODEL` | Optional | Defaults to `gemini-3.5-flash-lite` |
 
-Generate a session secret locally with Node.js:
+Generate `CAMPUSFIND_SESSION_SECRET` on a machine with Node.js:
 
 ```powershell
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Copy the printed value directly into `CAMPUSFIND_SESSION_SECRET` in Vercel. Do not commit these secrets into GitHub or put them in frontend JavaScript. Redeploy after changing environment variables.
+Never commit the output or any other credentials to GitHub. After changing environment variables, redeploy the project.
+
+### Deploy
+
+Push to `main` and check the **Deployments** tab in Vercel. Vercel's Git integration builds and deploys the connected repository. The repository intentionally does not include a separate GitHub Actions workflow that deploys with a token; this avoids duplicate/conflicting deployments.
 
 ## Run locally in VS Code
 
 Requirements: Node.js 20 or newer.
+
+From the `src/` folder:
 
 ```powershell
 npm install
@@ -72,29 +55,17 @@ Copy-Item .env.example .env
 npm start
 ```
 
-Open <http://localhost:3000>. The local mode saves test data to `data/` and photos to `uploads/`, so Neon and Vercel Blob are not required for local development. Add `GEMINI_API_KEY` in `.env` only if you want Gemini features locally.
+Open http://localhost:3000. Local reports are saved in `src/data/` and photos in `src/uploads/`. Cloud storage isn't needed for local development. Add `GEMINI_API_KEY` to `.env` only if you want AI features locally.
 
-Run tests:
+Run the test suite:
 
 ```powershell
 node --test
 ```
 
-## Privacy and operational notes
+## Important privacy notes
 
-- The Recovered Items register, its ID-card photos, report deletion, and Clear All action require administrator sign-in in Vercel mode. Sessions expire after eight hours.
-- Lost/found reports are currently public. Reporter names and mobile numbers are visible on the board by design. Obtain consent and do not use real student data until your institution approves the workflow and privacy notice.
-- The admin password is shared by the designated staff team; this is a simple administrator gate, not per-user identity management or an audit log. Add institution-approved authentication and rate limiting before broad production use.
-- Gemini receives uploaded item photos for image analysis. When the administrator explicitly selects ID extraction, the two ID-card images are sent to Google's Gemini API to extract only name, roll number, and course according to the prompt in `lib/vision.js`.
-- Existing data from the old local JSON project does not automatically migrate to Neon; local files are not deployed as live database records.
-
-## Repository layout
-
-- `public/` — browser UI, JavaScript, and CSS
-- `api/[...path].js` — Vercel catch-all serverless function
-- `server.js` — shared Express API (local + Vercel)
-- `lib/cloud-storage.js` — Neon database and private Blob integration
-- `lib/matcher.js` — report matching logic
-- `lib/vision.js` — Gemini image recognition and ID extraction
-- `vercel.json` — Vercel static output/function configuration
-- `.env.example` — variable names for local setup
+- Lost/found reports are public. The current UI returns the reporter's name and mobile number with report data. Get your institution's approval and privacy guidance before using real student details.
+- Recovered-item records and student ID-card photos are protected by the administrator session.
+- Use a unique admin password, keep API keys out of frontend code, and never commit `.env`, real student records, or uploaded photos.
+- Blob persistence stores each report as a JSON object and uses a separate unique object name per recovered found-item report. It is suitable for the current small project; a relational database is preferable for a large campus rollout with concurrent edits and reporting requirements.
