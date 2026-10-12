@@ -66,7 +66,7 @@ async function writeJson(pathname, value, { allowOverwrite = true } = {}) {
 
 async function remove(pathname) {
   const token = requireBlobToken();
-  await del(pathname, { access: "private", token });
+  await del(pathname, { token });
 }
 
 export async function loadCloudItems() {
