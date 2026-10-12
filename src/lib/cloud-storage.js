@@ -1,93 +1,128 @@
-import { neon } from "@neondatabase/serverless";
-import { put, del, get } from "@vercel/blob";
+import { put, del, get, list } from "@vercel/blob";
 
-let sqlClient;
-let schemaPromise;
-
-function getSql() {
-  const connectionString = process.env.DATABASE_URL?.trim();
-  if (!connectionString) {
-    const error = new Error("Cloud database is not configured. Add DATABASE_URL in Vercel Project Settings → Environment Variables.");
-    error.code = "CAMPUSFIND_DATABASE_NOT_CONFIGURED";
-    throw error;
-  }
-  if (!sqlClient) sqlClient = neon(connectionString);
-  return sqlClient;
-}
-
-async function ensureSchema() {
-  if (!schemaPromise) {
-    schemaPromise = (async () => {
-      const sql = getSql();
-      await sql`CREATE TABLE IF NOT EXISTS campusfind_items (
-        id TEXT PRIMARY KEY,
-        payload JSONB NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )`;
-      await sql`CREATE TABLE IF NOT EXISTS campusfind_recovered_items (
-        id TEXT PRIMARY KEY,
-        item_id TEXT NOT NULL UNIQUE,
-        payload JSONB NOT NULL,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )`;
-    })().catch(error => {
-      schemaPromise = undefined;
-      throw error;
-    });
-  }
-  await schemaPromise;
-  return getSql();
-}
+// Private Vercel Blob is used for both uploaded photos and durable JSON records.
+// This keeps cloud operation independent of a separately provisioned SQL database.
+// Each report is one object. Recovery reports use the associated found-item ID as
+// their pathname, so one found report cannot have two recovery records.
 
 function requireBlobToken() {
   const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
   if (!token) {
-    const error = new Error("Image storage is not configured. Create a Vercel Blob store and add BLOB_READ_WRITE_TOKEN in the Vercel project environment variables.");
+    const error = new Error("Private Blob storage is not configured. Connect a private Vercel Blob store to this project and set BLOB_READ_WRITE_TOKEN.");
     error.code = "CAMPUSFIND_BLOB_NOT_CONFIGURED";
     throw error;
   }
   return token;
 }
 
+async function listRecords(prefix) {
+  const token = requireBlobToken();
+  const records = [];
+  let cursor;
+
+  do {
+    const page = await list({
+      prefix,
+      limit: 1000,
+      ...(cursor ? { cursor } : {}),
+      access: "private",
+      token
+    });
+
+    for (const blob of page.blobs || []) {
+      if (!blob.pathname?.endsWith(".json")) continue;
+      const result = await get(blob.pathname, { access: "private", token });
+      if (!result || result.statusCode !== 200) continue;
+      try {
+        const text = await new Response(result.stream).text();
+        records.push({ pathname: blob.pathname, value: JSON.parse(text) });
+      } catch (error) {
+        console.warn(`Skipping invalid CampusFind record ${blob.pathname}:`, error?.message || "invalid JSON");
+      }
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+
+  return records;
+}
+
+async function readJson(pathname) {
+  const token = requireBlobToken();
+  const result = await get(pathname, { access: "private", token });
+  if (!result || result.statusCode !== 200) return null;
+  return JSON.parse(await new Response(result.stream).text());
+}
+
+async function writeJson(pathname, value, { allowOverwrite = true } = {}) {
+  const token = requireBlobToken();
+  return put(pathname, JSON.stringify(value), {
+    access: "private",
+    addRandomSuffix: false,
+    allowOverwrite,
+    contentType: "application/json; charset=utf-8",
+    token
+  });
+}
+
+async function remove(pathname) {
+  const token = requireBlobToken();
+  await del(pathname, { access: "private", token });
+}
+
 export async function loadCloudItems() {
-  const sql = await ensureSchema();
-  const rows = await sql`SELECT payload FROM campusfind_items ORDER BY created_at DESC`;
-  return rows.map(row => row.payload);
+  const rows = await listRecords("data/items/");
+  return rows.map(row => row.value).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 export async function saveCloudItem(item) {
-  const sql = await ensureSchema();
-  await sql`INSERT INTO campusfind_items (id, payload, created_at)
-    VALUES (${item.id}, ${JSON.stringify(item)}::jsonb, ${item.createdAt}::timestamptz)
-    ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload`;
+  await writeJson(`data/items/${item.id}.json`, item, { allowOverwrite: true });
 }
 
 export async function deleteCloudItem(id) {
-  const sql = await ensureSchema();
-  await sql`DELETE FROM campusfind_items WHERE id = ${id}`;
+  const pathname = `data/items/${id}.json`;
+  const existing = await readJson(pathname);
+  if (existing) await remove(pathname);
 }
 
 export async function clearCloudItems() {
-  const sql = await ensureSchema();
-  const rows = await sql`DELETE FROM campusfind_items RETURNING id`;
+  const rows = await listRecords("data/items/");
+  await Promise.all(rows.map(row => remove(row.pathname)));
   return rows.length;
 }
 
 export async function loadCloudRecoveries() {
-  const sql = await ensureSchema();
-  const rows = await sql`SELECT payload FROM campusfind_recovered_items ORDER BY created_at DESC`;
-  return rows.map(row => row.payload);
+  const rows = await listRecords("data/recoveries/");
+  return rows.map(row => row.value).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 export async function saveCloudRecovery(record) {
-  const sql = await ensureSchema();
-  await sql`INSERT INTO campusfind_recovered_items (id, item_id, payload, created_at)
-    VALUES (${record.id}, ${record.itemId}, ${JSON.stringify(record)}::jsonb, ${record.createdAt}::timestamptz)`;
+  // Use the found report's ID as a unique storage key to prevent duplicate handovers.
+  const pathname = `data/recoveries/${record.itemId}.json`;
+  const existing = await readJson(pathname);
+  if (existing) {
+    const error = new Error("This found-item report is already recorded as recovered.");
+    error.code = "23505";
+    throw error;
+  }
+
+  try {
+    await writeJson(pathname, record, { allowOverwrite: false });
+  } catch (error) {
+    // Distinguish a simultaneous duplicate submission from unrelated storage errors.
+    const nowExists = await readJson(pathname).catch(() => null);
+    if (nowExists) {
+      const duplicate = new Error("This found-item report is already recorded as recovered.");
+      duplicate.code = "23505";
+      throw duplicate;
+    }
+    throw error;
+  }
 }
 
 export async function deleteCloudRecovery(id) {
-  const sql = await ensureSchema();
-  await sql`DELETE FROM campusfind_recovered_items WHERE id = ${id}`;
+  const rows = await listRecords("data/recoveries/");
+  const record = rows.find(row => String(row.value?.id) === String(id));
+  if (record) await remove(record.pathname);
 }
 
 export async function storePrivatePhoto(folder, filename, buffer, contentType) {
@@ -111,6 +146,5 @@ export async function readPrivatePhoto(pathname) {
 
 export async function deletePrivatePhoto(pathname) {
   if (!pathname) return;
-  const token = requireBlobToken();
-  await del(pathname, { token });
+  await remove(pathname);
 }
