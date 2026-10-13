@@ -44,3 +44,18 @@
   outline: 2px solid #69b7a9;
   outline-offset: 1px;
 }
+
+
+/* CampusFind shareable QR panel */
+.qr-share-panel{display:grid;grid-template-columns:minmax(0,1fr) 310px;align-items:center;gap:28px;margin-top:18px;padding:25px 28px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.qr-share-copy h2{font:800 24px/1.2 Manrope;letter-spacing:-.8px;margin:0 0 10px}
+.qr-share-copy>p:not(.eyebrow){font-size:12px;line-height:1.75;color:#617480;max-width:570px}
+.qr-share-url{overflow-wrap:anywhere;margin:12px 0}
+.qr-share-url a{color:var(--teal);font-weight:800;text-decoration:underline}
+.qr-share-actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+.qr-note{font-size:10px!important;color:var(--muted)!important;margin-top:12px}
+.qr-code-card{display:flex;flex-direction:column;align-items:center;gap:11px;padding:16px;background:#f6faf9;border:1px solid #dfebe7;border-radius:14px;min-width:0}
+.qr-code-card a{display:block;width:100%;max-width:280px;padding:7px;background:#fff;border-radius:9px}
+.qr-code-card img{display:block;width:100%;height:auto;aspect-ratio:1;object-fit:contain;image-rendering:auto}
+.qr-code-card span{font-size:10px;font-weight:800;letter-spacing:.7px;color:var(--teal);text-align:center}
+@media(max-width:660px){.qr-share-panel{grid-template-columns:1fr;padding:19px 16px;gap:18px}.qr-share-copy h2{font-size:21px}.qr-share-actions .btn{flex:1}.qr-code-card{width:100%}.qr-code-card a{max-width:240px}}
