@@ -271,7 +271,7 @@ function sendPrivateImage(res, file) {
   return res.end(file.buffer);
 }
 
-app.get("/api/health", (_req, res) => res.json({ ok: true, cloud: IS_VERCEL, aiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()), adminConfigured: adminConfigReady(), model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite" }));
+app.get("/api/health", (_req, res) => res.json({ ok: true, cloud: IS_VERCEL, aiConfigured: Boolean(process.env.GEMINI_API_KEY?.trim()), adminConfigured: adminConfigReady() }));
 app.get("/api/admin/session", (req, res) => res.json({ required: adminModeEnabled(), authenticated: hasAdminSession(req), configured: adminConfigReady() }));
 app.post("/api/admin/login", (req, res) => {
   if (!adminModeEnabled()) return res.json({ ok: true, authenticated: true });
@@ -378,7 +378,7 @@ app.post("/api/recovered-items/analyze-id", recoveryUpload.array("idPhotos", 2),
     const photos = valid.map(file => ({ buffer: file.buffer, mimeType: file.type.mimeType }));
     try {
       const student = await extractStudentDetailsWithGemini(photos);
-      return res.json({ student, model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite" });
+      return res.json({ student });
     } catch (error) {
       if (error.code === "GEMINI_NOT_CONFIGURED") return res.status(412).json({ error: "Gemini is not configured. Add GEMINI_API_KEY in Vercel Environment Variables or .env, or enter the student details manually." });
       console.warn("Student ID extraction did not complete:", error.message);
