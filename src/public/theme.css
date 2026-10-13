@@ -15,3 +15,32 @@
 /* Recovered-item handover register */
 .full-field{grid-column:1/-1}.recovery-intro{margin:14px 0 17px}.recovery-panel{padding:23px}.id-upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:8px 0 17px}.id-upload-card{min-width:0;border:1px solid var(--line);border-radius:13px;padding:14px;background:#fbfdfd}.id-upload-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:13px}.id-step{width:31px;height:31px;display:grid;place-items:center;flex:0 0 auto;background:var(--mint);border-radius:9px;color:var(--teal);font:800 11px Manrope}.id-upload-head strong{display:block;font:800 12px Manrope}.id-upload-head p{font-size:10px;color:var(--muted);line-height:1.5;margin:5px 0 0}.id-upload-card .upload-dropzone{padding:11px;gap:10px}.id-upload-card .upload-plus{height:34px;width:34px;flex-shrink:0}.id-upload-card .upload-dropzone small{font-size:9px;line-height:1.4}.id-photo-preview{position:relative;min-height:115px;margin-top:10px;border-radius:9px;background:#f2f7f6;border:1px dashed #d7e5e1;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-size:10px;text-align:center;padding:10px}.id-photo-preview img{display:block;max-width:100%;width:auto;height:150px;object-fit:contain;border-radius:6px}.id-photo-preview>span{overflow-wrap:anywhere}.id-photo-preview .image-remove{right:6px;top:6px}.id-photo-preview>span:last-child{position:absolute;bottom:0;left:0;right:0;background:#ffffffed;padding:5px 8px;font-size:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.id-analysis-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;border:1px solid #d8ebe5;border-radius:11px;background:#f1faf7;margin:0 0 18px}.id-analysis-row>div{min-width:0}.id-analysis-row strong{font:800 12px Manrope;color:var(--ink)}.id-analysis-row p{font-size:10px;line-height:1.6;color:var(--muted);margin:5px 0 0}.id-analysis-row .btn{flex-shrink:0}.status-error{color:#ad3f4c!important}.status-success{color:#1d765f!important}.student-fields{padding:17px;border:1px solid var(--line);background:#fff;border-radius:12px;margin-bottom:18px}.student-fields .panel-head{margin-bottom:13px}.student-fields .field:last-child{margin-bottom:0}.recovery-history-head{margin-top:30px}.recovered-list{display:grid;gap:12px}.recovery-record{background:#fff;border:1px solid var(--line);border-radius:15px;padding:17px;box-shadow:var(--shadow);min-width:0}.recovery-record-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.recovery-record-title{min-width:0}.recovery-index{display:inline-block;color:var(--teal);background:var(--mint);font-size:8px;font-weight:800;letter-spacing:1.1px;padding:5px 7px;border-radius:5px;margin-bottom:8px}.recovery-record-title h3{font:800 16px Manrope;margin:0 0 5px;overflow-wrap:anywhere}.recovery-record-title p{font-size:10px;line-height:1.6;color:var(--muted);margin:0;overflow-wrap:anywhere}.recovery-record-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}.recipient-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:15px 0 14px}.recipient-field{min-width:0;background:#f6faf9;border:1px solid #e7f0ed;border-radius:9px;padding:10px}.recipient-field span{display:block;font-size:9px;color:var(--muted);margin-bottom:5px}.recipient-field strong{display:block;font:800 11px Manrope;color:#24404a;overflow-wrap:anywhere}.recovery-photo-heading{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:10px;color:var(--muted);margin:0 0 8px}.recovery-photo-heading strong{color:var(--ink);font:800 10px Manrope}.recovery-photo-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-width:440px}.recovery-photo-link{display:block;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#f5f9f8;min-width:0}.recovery-photo-link img{display:block;width:100%;height:145px;object-fit:contain;background:#edf4f2}.recovery-photo-link span{display:block;font-size:9px;color:var(--muted);padding:7px 8px;background:#fff}.recovery-record-actions .text-button{padding:4px 0}.privacy-note{overflow-wrap:anywhere}
 @media(max-width:660px){.nav{grid-template-columns:repeat(6,minmax(0,1fr))}.nav-link{font-size:8px;padding:9px 1px}.recovery-panel{padding:15px}.id-upload-grid{grid-template-columns:1fr}.id-analysis-row{align-items:stretch;flex-direction:column}.id-analysis-row .btn{width:100%}.student-fields{padding:13px}.recovery-record{padding:13px}.recovery-record-heading{flex-direction:column}.recovery-record-actions{width:100%;flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}.recipient-grid{grid-template-columns:1fr}.recovery-photo-gallery{max-width:none}.recovery-photo-link img{height:112px}.recovery-history-head{gap:10px}.recovery-history-head .live-pill{font-size:9px}}
+
+
+/* Keep the Lost and Found form controls explicitly interactive across browsers. */
+.item-form,
+.item-form .form-grid,
+.item-form .field {
+  position: relative;
+}
+.item-form .field {
+  z-index: 1;
+  min-width: 0;
+}
+.item-form .field input:not([type="file"]),
+.item-form .field select,
+.item-form .field textarea {
+  position: relative !important;
+  z-index: 2;
+  pointer-events: auto !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  opacity: 1 !important;
+  touch-action: manipulation;
+}
+.item-form .field input:not([type="file"]):focus,
+.item-form .field select:focus,
+.item-form .field textarea:focus {
+  outline: 2px solid #69b7a9;
+  outline-offset: 1px;
+}
